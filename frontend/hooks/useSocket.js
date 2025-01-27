@@ -13,7 +13,7 @@ function useSocket() {
     useEffect(()=>{
         
         if(user){
-            const socket = io("http://localhost:5000",{
+            const socket = io("https://messaging-wqm5.onrender.com/",{
                 query: {
                     userId: user._id,
                 }
