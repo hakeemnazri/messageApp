@@ -1,9 +1,11 @@
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
+import mongoose from "mongoose";
+import { io, shareSocketId } from "../socket/socket.js";
 
 export const sendMessage = async(req, res) =>{
     try {
-        const { message } = req.body;
+        const { message } = req.body; 
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -29,6 +31,11 @@ export const sendMessage = async(req, res) =>{
 
         await Promise.all([conversation.save(), newMessage.save()])
 
+        const receiverSocketId = shareSocketId(receiverId)
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("newMessage", newMessage)
+        }
+
         res.status(201).json(newMessage)
 
     } catch (error) {
@@ -40,16 +47,19 @@ export const sendMessage = async(req, res) =>{
 
 export const getMessage = async(req, res) =>{
     try {
-        const {id: userToChatId} = req.params;
+        const {id: selectedId} = req.params;
+        const userToChatId = new mongoose.Types.ObjectId(selectedId);
         const senderId = req.user._id;
 
+
         const conversation = await Conversation.findOne({
-            participants: {$all: [userToChatId, senderId]}
+            participants: {$all: [senderId, userToChatId]}
         }).populate("messages")
 
         if(!conversation){
             return res.status(200).json([])
         }
+        console.log(conversation)
 
         res.status(200).json(conversation.messages)
 
